@@ -12,6 +12,12 @@ You control **SOL-42**, an artificial intelligence created to maintain balance b
 
 ---
 
+## 🎮 Play the Game
+
+> **[🌐 Play Turing's Solstice](https://turing-solstice.vercel.app)**
+
+---
+
 ## ✨ Features
 
 - 🏃 **Fast-paced runner** with obstacles, energy orbs, and platforms
