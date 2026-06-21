@@ -1,4 +1,4 @@
-// src/core/Game.ts - Versão final com pausa e BaseObstacle
+// src/core/Game.ts - Versão final com áudio
 
 import { GameState, GameConfig } from '../types';
 import { GAME_CONFIG } from '../constants/game';
@@ -7,6 +7,7 @@ import { EnergyOrb } from '../entities/EnergyOrb';
 import { Platform } from '../entities/Platform';
 import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { RenderSystem } from '../systems/RenderSystem';
+import { AudioSystem } from '../systems/AudioSystem';
 import { InputController } from '../controllers/InputController';
 import { UIController } from '../controllers/UIController';
 import { EnigmaSystem } from '../systems/EnigmaSystem';
@@ -39,6 +40,7 @@ export class Game {
   private particles: any[];
 
   private renderSystem: RenderSystem;
+  private audioSystem: AudioSystem;
   private inputController: InputController;
   private uiController: UIController;
   private enigmaSystem: EnigmaSystem;
@@ -80,6 +82,8 @@ export class Game {
   private enigmaPaused: boolean = false;
   private enigmaTimeLimit: number = 10;
 
+  private wasPaused: boolean = false;
+
   constructor(
     canvas: HTMLCanvasElement,
     uiController: UIController
@@ -97,7 +101,9 @@ export class Game {
     
     this.groundY = this.config.height - this.config.groundHeight;
 
+    // ===== INICIALIZA SISTEMAS =====
     this.renderSystem = new RenderSystem(this.ctx, this.config.width, this.config.height);
+    this.audioSystem = new AudioSystem();
     this.inputController = new InputController(canvas, this.uiController.getOptionButtons(), this.uiController.getRestartButton());
     this.enigmaSystem = new EnigmaSystem();
     this.interactionSystem = new InteractionSystem();
@@ -107,7 +113,7 @@ export class Game {
     this.gameInitializer = new GameInitializer(this.config);
     this.gameUpdater = new GameUpdater(this.config);
     this.inputHandler = new InputHandler(this.inputController, this.interactionSystem, this.canvas, this.uiController);
-    this.collisionHandler = new CollisionHandler();
+    this.collisionHandler = new CollisionHandler(this.audioSystem);
     this.modeManager = new ModeManager(this.ctx, this.config.width, this.config.height, this.uiController);
 
     this.gameRenderer = new GameRenderer(this.ctx, this.config, this.renderSystem, this.sceneManager);
@@ -172,6 +178,8 @@ export class Game {
         this.hasStarted = true;
         this.uiController.hideStartScreen();
         this.uiController.updatePauseButtonVisibility(true);
+        this.audioSystem.playGameStart();
+        this.audioSystem.startBackgroundMusic();
       }
     });
     
@@ -226,23 +234,34 @@ export class Game {
     this.uiController.showStartScreen();
     this.updateModeButtons();
     this.uiController.updatePauseButtonVisibility(false);
+    this.audioSystem.stopBackgroundMusic();
   }
 
   private setupListeners(): void {
     this.inputHandler.setupListeners(
-     {paused: this.state.paused,
-      gameOver: this.state.gameOver,
-      enigmaPaused: this.enigmaPaused,
-     },
+      {paused: this.state.paused,
+       gameOver: this.state.gameOver,
+       enigmaPaused: this.enigmaPaused,
+      },
       () => this.hasStarted,
       this.player, this.particles,
-      () => this.inputHandler.handleJump(this.state, this.enigmaPaused, this.player, this.particles),
+      () => {
+        // Som de pulo
+        if (this.player.grounded) {
+          this.audioSystem.playJump();
+        } else if (this.player.jumpCount < 2) {
+          this.audioSystem.playDoubleJump();
+        }
+        this.inputHandler.handleJump(this.state, this.enigmaPaused, this.player, this.particles);
+      },
       () => this.restart(),
       (index) => this.enigmaHandler.handleEnigmaAnswer(index, () => this.state),
       () => { 
         this.hasStarted = true;
         this.uiController.hideStartScreen();
         this.uiController.updatePauseButtonVisibility(true);
+        this.audioSystem.playGameStart();
+        this.audioSystem.startBackgroundMusic();
       }
     );
 
@@ -254,6 +273,18 @@ export class Game {
   private setupPauseListener(): void {
     this.uiController.setPauseCallback((paused: boolean) => {
       this.state.paused = paused;
+      
+      // Sons de pausa/despausa
+      if (paused) {
+        this.audioSystem.playPause();
+        this.audioSystem.stopBackgroundMusic();
+        this.wasPaused = true;
+      } else {
+        this.audioSystem.playUnpause();
+        if (this.hasStarted && !this.state.gameOver) {
+          this.audioSystem.startBackgroundMusic();
+        }
+      }
     });
   }
 
@@ -276,6 +307,11 @@ export class Game {
     // Se o jogo estiver pausado, não atualiza
     if (this.state.paused) {
       return;
+    }
+
+    // Verifica se acabou de despausar
+    if (this.wasPaused) {
+      this.wasPaused = false;
     }
 
     this.gameUpdater.updateSpeed(
@@ -310,6 +346,8 @@ export class Game {
           const msg = `${t('gameover.message')} ${t('gameover.level')} ${this.difficultyLevel + 1}`;
           this.uiController.setNotification(msg, 'fail');
           this.uiController.updatePauseButtonVisibility(false);
+          this.audioSystem.playGameOver();
+          this.audioSystem.stopBackgroundMusic();
           
           const mode = this.state.hardMode ? 'hard' : 
                        this.state.turingVision ? 'vision' : 
@@ -367,6 +405,11 @@ export class Game {
         }
         break;
       }
+    }
+
+    // Música de fundo - manter enquanto jogo rodando
+    if (this.hasStarted && !this.state.gameOver && !this.state.paused) {
+      this.audioSystem.startBackgroundMusic();
     }
   }
 
@@ -487,6 +530,7 @@ export class Game {
 
   public destroy(): void { 
     this.stopLoop(); 
-    this.inputController.destroy(); 
+    this.inputController.destroy();
+    this.audioSystem.destroy();
   }
 }

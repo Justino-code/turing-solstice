@@ -62,6 +62,7 @@ export class UIView {
             <span class="stat-item">⏳ <strong id="scoreDisplay">0</strong></span>
           </div>
           <div id="header-right">
+            <!-- Botão de Pausa (sem botão de volume) -->
             <button id="pause-btn" class="pause-btn hidden" title="Pausar jogo">
               <span class="pause-icon">⏸️</span>
             </button>
@@ -167,7 +168,6 @@ export class UIView {
   private addStyles(): void {
     const style = document.createElement('style');
     style.textContent = `
-      /* ===== HEADER ===== */
       #header {
         display: flex;
         align-items: center;
@@ -220,7 +220,6 @@ export class UIView {
         min-width: 0;
       }
 
-      /* ===== BOTÃO DE PAUSA ===== */
       #pause-btn {
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -268,7 +267,6 @@ export class UIView {
         animation: none;
       }
 
-      /* ===== OVERLAY DE PAUSA ===== */
       #pause-overlay {
         animation: fadeIn 0.3s ease-out;
       }
@@ -288,7 +286,6 @@ export class UIView {
         to { opacity: 1; }
       }
 
-      /* ===== RESPONSIVO ===== */
       @media (max-width: 600px) {
         #header {
           padding: 4px 8px;

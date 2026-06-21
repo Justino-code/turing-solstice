@@ -4,6 +4,7 @@
 import { t, getLanguage, setLanguage, Language } from '../utils/i18n';
 import { RankingService, ScoreEntry } from '../services/RankingService';
 import { GlobalRankingService, GlobalScoreEntry } from '../services/GlobalRankingService';
+import { AudioSystem } from '../systems/AudioSystem';
 import { UIView } from '../views/UIView';
 
 export class UIController {
@@ -11,6 +12,7 @@ export class UIController {
   private onStartCallback: (() => void) | null = null;
   private onPauseToggle: ((paused: boolean) => void) | null = null;
   private currentRankingTab: 'personal' | 'global' = 'personal';
+  private audioSystem: AudioSystem | null = null;
 
   constructor(appId: string = 'app') {
     this.view = new UIView(appId);
@@ -19,6 +21,7 @@ export class UIController {
     this.setupStartMobileButton();
     this.setupRankingButtons();
     this.setupPauseButton();
+    this.setupMobilePause();
     this.view.refreshUITexts(getLanguage());
     this.view.resizeCanvas();
 
@@ -55,26 +58,58 @@ export class UIController {
     this.onStartCallback = callback;
   }
 
+  // ===== ÁUDIO =====
+  public setAudioSystem(audioSystem: AudioSystem): void {
+    this.audioSystem = audioSystem;
+    this.setupVolumeButton();
+  }
+
+  private setupVolumeButton(): void {
+    const volumeBtn = document.getElementById('volume-btn');
+    if (!volumeBtn) return;
+
+    let muted = false;
+    volumeBtn.addEventListener('click', () => {
+      muted = !muted;
+      if (this.audioSystem) {
+        this.audioSystem.toggleMute();
+      }
+      volumeBtn.textContent = muted ? '🔇' : '🔊';
+      volumeBtn.title = muted ? 'Ativar som' : 'Desativar som';
+    });
+  }
+
   // ===== PAUSE =====
   private setupPauseButton(): void {
-    // Botão de pausa
     this.view.pauseBtn.addEventListener('click', () => {
       this.togglePause();
     });
 
-    // Botão de retomar no overlay
     this.view.pauseResumeBtn.addEventListener('click', () => {
       this.togglePause();
     });
 
-    // Tecla ESC para pausar/despausar
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        // Só funciona se o jogo já tiver começado e não estiver em game over
         if (this.view.pauseBtn.classList.contains('visible')) {
           this.togglePause();
         }
       }
+    });
+  }
+
+  private setupMobilePause(): void {
+    let lastTap = 0;
+    this.view.canvas.addEventListener('touchend', (e) => {
+      const currentTime = Date.now();
+      const tapLength = currentTime - lastTap;
+      if (tapLength < 300 && tapLength > 0) {
+        if (this.view.pauseBtn.classList.contains('visible')) {
+          this.togglePause();
+        }
+        e.preventDefault();
+      }
+      lastTap = currentTime;
     });
   }
 
@@ -105,7 +140,6 @@ export class UIController {
 
   public updatePauseButtonVisibility(visible: boolean): void {
     this.view.updatePauseButtonVisibility(visible);
-    // Se o botão for escondido, garante que o overlay também seja escondido
     if (!visible && this.view.isPaused) {
       this.view.hidePauseOverlay();
       if (this.onPauseToggle) {
@@ -136,7 +170,6 @@ export class UIController {
   // ===== RANKING =====
   private setupRankingButtons(): void {
     this.view.rankingButton?.addEventListener('click', () => {
-      // Pausa o jogo ao abrir o ranking
       if (this.view.pauseBtn.classList.contains('visible') && !this.view.isPaused) {
         this.togglePause();
       }
@@ -145,7 +178,6 @@ export class UIController {
 
     this.view.rankingBackButton?.addEventListener('click', () => {
       this.hideRankingScreen();
-      // Retoma o jogo se estava pausado
       if (this.view.isPaused && this.view.pauseBtn.classList.contains('visible')) {
         this.togglePause();
       }
@@ -346,7 +378,6 @@ export class UIController {
 
   public reset(): void {
     this.view.reset();
-    // Garante que o overlay de pausa também seja resetado
     this.hidePauseOverlay();
     this.updatePauseButtonVisibility(false);
   }

@@ -4,9 +4,16 @@
 import { Player } from '../entities/Player';
 import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { EnergyOrb } from '../entities/EnergyOrb';
+import { AudioSystem } from '../systems/AudioSystem';
 import { randomFloat, randomInt, createParticle } from '../utils/helpers';
 
 export class CollisionHandler {
+  private audioSystem: AudioSystem;
+
+  constructor(audioSystem: AudioSystem) {
+    this.audioSystem = audioSystem;
+  }
+
   public checkCollisions(
     player: Player,
     obstacles: BaseObstacle[],
@@ -33,6 +40,9 @@ export class CollisionHandler {
       const collides = obstacle.collidesWithCircle(playerCenterX, playerCenterY, playerRadius);
       
       if (collides) {
+        // ===== SOM DE COLISÃO =====
+        this.audioSystem.playHit();
+        
         // Calcula o dano baseado no tipo
         let damage = 8 + difficultyLevel * 2;
         if (obstacle.type === 'void') damage += 5;
@@ -64,6 +74,7 @@ export class CollisionHandler {
         // Verifica game over
         if (state.energy <= 0) {
           state.gameOver = true;
+          this.audioSystem.playGameOver();
           onGameOver();
           return;
         }
@@ -82,6 +93,9 @@ export class CollisionHandler {
       const collisionDistance = playerRadius + orb.radius * 0.8;
       
       if (distance < collisionDistance) {
+        // ===== SOM DE COLETA =====
+        this.audioSystem.playCollectOrb();
+        
         orb.collect();
         
         const baseHeal = Math.max(3, 10 - Math.floor(difficultyLevel / 2));

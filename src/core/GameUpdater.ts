@@ -7,20 +7,27 @@ import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { EnergyOrb } from '../entities/EnergyOrb';
 import { EnigmaSystem } from '../systems/EnigmaSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
+import { AudioSystem } from '../systems/AudioSystem';
 import { UIController } from '../controllers/UIController';
 import { SceneManager } from './SceneManager';
 import { EffectsManager } from './EffectsManager';
 import { randomInt } from '../utils/helpers';
 import { t } from '../utils/i18n';
-import { UNLOCK_CYCLES } from '@/constants/game';
+import { UNLOCK_CYCLES } from '../constants/game';
 
 export class GameUpdater {
   private config: { width: number; height: number; groundHeight: number };
   private groundY: number;
+  private audioSystem: AudioSystem | null = null;
+  private previousDifficulty: number = -1;
 
   constructor(config: { width: number; height: number; groundHeight: number }) {
     this.config = config;
     this.groundY = config.height - config.groundHeight;
+  }
+
+  public setAudioSystem(audioSystem: AudioSystem): void {
+    this.audioSystem = audioSystem;
   }
 
   public updateSpeed(
@@ -49,7 +56,7 @@ export class GameUpdater {
   public update(
     state: GameState,
     player: Player,
-    obstacles: BaseObstacle[], // Mudança: Obstacle[] → BaseObstacle[]
+    obstacles: BaseObstacle[],
     energyOrbs: EnergyOrb[],
     particles: any[],
     sceneManager: SceneManager,
@@ -94,11 +101,20 @@ export class GameUpdater {
       return;
     }
 
+    // ===== ATUALIZA DIFICULDADE =====
     const newDifficulty = Math.floor(getGameTime() / 15);
     let difficultyLevel = getDifficultyLevel();
+    
+    // Verifica se a dificuldade aumentou
     if (newDifficulty > difficultyLevel) {
       difficultyLevel = newDifficulty;
       setDifficultyLevel(difficultyLevel);
+      
+      // Toca som de nível up
+      if (this.audioSystem && difficultyLevel > 0) {
+        this.audioSystem.playLevelUp();
+      }
+      
       if (difficultyLevel > 0) {
         uiController.showTimedNotification(`${t('level.new')} ${difficultyLevel + 1}`, 'warning', 3000);
       }
@@ -116,7 +132,7 @@ export class GameUpdater {
       player.grounded = true;
     }
 
-    // Atualiza obstáculos (agora BaseObstacle[])
+    // Atualiza obstáculos
     for (const obstacle of obstacles) {
       obstacle.update(state.speed);
     }
