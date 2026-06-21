@@ -1,11 +1,11 @@
-// src/core/Game.ts - Versão final com Ranking e prompt de nome
+// src/core/Game.ts - Versão final com pausa e BaseObstacle
 
 import { GameState, GameConfig } from '../types';
 import { GAME_CONFIG } from '../constants/game';
 import { Player } from '../entities/Player';
-import { Obstacle } from '../entities/Obstacle';
 import { EnergyOrb } from '../entities/EnergyOrb';
 import { Platform } from '../entities/Platform';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { RenderSystem } from '../systems/RenderSystem';
 import { InputController } from '../controllers/InputController';
 import { UIController } from '../controllers/UIController';
@@ -25,11 +25,15 @@ import { RankingService } from '../services/RankingService';
 import { GlobalRankingService } from '../services/GlobalRankingService';
 import { t } from '../utils/i18n';
 
+// ===== IMPORTAÇÕES DO SISTEMA DE OBSTÁCULOS =====
+import { registerBaseObstacles } from '../registries/ObstacleRegistration';
+import { ObstacleRegistry } from '../registries/ObstacleRegistry';
+
 export class Game {
   private config: GameConfig;
   private state: GameState;
   private player: Player;
-  private obstacles: Obstacle[];
+  private obstacles: BaseObstacle[] = [];
   private energyOrbs: EnergyOrb[];
   private platforms: Platform[];
   private particles: any[];
@@ -80,6 +84,10 @@ export class Game {
     canvas: HTMLCanvasElement,
     uiController: UIController
   ) {
+    // ===== REGISTRA OS OBSTÁCULOS BASE =====
+    registerBaseObstacles();
+    console.log('✅ Obstáculos registrados:', ObstacleRegistry.getAvailableTypes());
+
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.config = { ...GAME_CONFIG };
@@ -157,11 +165,13 @@ export class Game {
     this.setupListeners();
     this.setupEnigmaListeners();
     this.setupModeListeners();
+    this.setupPauseListener();
     
     this.uiController.onStartClick(() => {
       if (!this.hasStarted) {
         this.hasStarted = true;
         this.uiController.hideStartScreen();
+        this.uiController.updatePauseButtonVisibility(true);
       }
     });
     
@@ -215,6 +225,7 @@ export class Game {
     this.platforms = [];
     this.uiController.showStartScreen();
     this.updateModeButtons();
+    this.uiController.updatePauseButtonVisibility(false);
   }
 
   private setupListeners(): void {
@@ -231,11 +242,18 @@ export class Game {
       () => { 
         this.hasStarted = true;
         this.uiController.hideStartScreen();
+        this.uiController.updatePauseButtonVisibility(true);
       }
     );
 
     document.addEventListener('keydown', (e) => {
       this.modeManager.handleKeydown(e, this.state, this.hasStarted);
+    });
+  }
+
+  private setupPauseListener(): void {
+    this.uiController.setPauseCallback((paused: boolean) => {
+      this.state.paused = paused;
     });
   }
 
@@ -255,6 +273,11 @@ export class Game {
   }
 
   private update(): void {
+    // Se o jogo estiver pausado, não atualiza
+    if (this.state.paused) {
+      return;
+    }
+
     this.gameUpdater.updateSpeed(
       this.hasStarted, () => this.gameTime, (v) => { this.gameTime = v; },
       this.state, (v) => { this.speedProgress = v; }
@@ -286,28 +309,32 @@ export class Game {
         async () => {
           const msg = `${t('gameover.message')} ${t('gameover.level')} ${this.difficultyLevel + 1}`;
           this.uiController.setNotification(msg, 'fail');
+          this.uiController.updatePauseButtonVisibility(false);
           
           const mode = this.state.hardMode ? 'hard' : 
                        this.state.turingVision ? 'vision' : 
                        this.state.spectrumMode ? 'spectrum' : 'normal';
           const finalScore = Math.floor(this.state.score);
           
-          // Salva no ranking pessoal
           RankingService.addScore(finalScore, this.state.cycle, mode);
           
-          // Verifica se qualifica para o ranking global
           if (GlobalRankingService.isConfigured()) {
             const qualifies = await GlobalRankingService.qualifiesForGlobal(finalScore);
             
             if (qualifies) {
-              const currentName = RankingService.getPlayerName();
-              const newName = await this.uiController.promptPlayerName(currentName);
-              
-              if (newName !== null && newName.trim()) {
-                RankingService.setPlayerName(newName.trim());
+              if (!RankingService.hasCustomName()) {
+                const currentName = RankingService.getPlayerName();
+                const newName = await this.uiController.promptPlayerName(currentName);
+                if (newName !== null && newName.trim() !== '') {
+                  RankingService.setPlayerName(newName.trim());
+                } else if (newName !== null) {
+                  RankingService.setPlayerName('Anônimo');
+                }
               }
               
-              GlobalRankingService.submitScore(finalScore, this.state.cycle, mode);
+              if (RankingService.hasCustomName()) {
+                GlobalRankingService.submitScore(finalScore, this.state.cycle, mode);
+              }
             }
           }
         }
@@ -345,44 +372,50 @@ export class Game {
 
   private spawnObstacles(): void {
     if (!this.hasStarted) return;
-
-    if (this.obstacleCooldown > 0) {
-      this.obstacleCooldown--;
-      return;
-    }
+    if (this.obstacleCooldown > 0) { this.obstacleCooldown--; return; }
 
     const baseInterval = Math.max(18, 50 - this.difficultyLevel * 2 - this.state.speed * 0.2);
-
     this.obstacleTimer++;
     if (this.obstacleTimer >= baseInterval) {
       this.obstacleTimer = 0;
-
       const chance = 0.4 + this.difficultyLevel * 0.03 + this.state.speed * 0.005;
       const chanceMultiplier = this.modeManager.getObstacleChanceMultiplier(this.state);
       
       if (Math.random() < chance * chanceMultiplier) {
-        const types: ('spike' | 'block' | 'crystal')[] = ['spike', 'block', 'spike', 'crystal'];
-        const maxType = Math.min(types.length - 1, Math.floor(this.difficultyLevel / 2));
-        const type = types[randomInt(0, Math.min(maxType, 2))];
-
-        const heightOptions = [
-          this.groundY - randomInt(25, 35),
-          this.groundY - randomInt(45, 60),
-          this.groundY - randomInt(70, 90)
-        ];
-
-        const y = heightOptions[randomInt(0, Math.min(Math.floor(this.difficultyLevel / 2), heightOptions.length - 1))];
-
         const isMobile = this.config.width < 500;
         const spawnDistance = isMobile ? this.config.width + 100 : this.config.width + 20;
-
-        this.obstacles.push(new Obstacle(spawnDistance, y, type));
+        
+        const heightOptions = [
+          this.groundY - randomInt(20, 30),
+          this.groundY - randomInt(35, 50),
+          this.groundY - randomInt(55, 75),
+          this.groundY - randomInt(80, 100)
+        ];
+        
+        const maxIndex = Math.min(Math.floor(this.difficultyLevel / 2) + 1, heightOptions.length - 1);
+        const y = heightOptions[randomInt(0, maxIndex)];
+        
+        const obstacle = ObstacleRegistry.createRandom(
+          spawnDistance, 
+          { min: y - 10, max: y + 10 }, 
+          this.difficultyLevel
+        );
+        
+        obstacle.active = true;
+        this.obstacles.push(obstacle);
         this.obstacleCooldown = 8;
 
         if (this.difficultyLevel > 2 && this.modeManager.shouldSpawnDouble(this.state)) {
-          const y2 = heightOptions[randomInt(0, Math.min(Math.floor(this.difficultyLevel / 2), heightOptions.length - 1))];
+          const y2 = heightOptions[randomInt(0, maxIndex)];
           const spawnDistance2 = isMobile ? spawnDistance + 100 : spawnDistance + 50 + randomInt(10, 20);
-          this.obstacles.push(new Obstacle(spawnDistance2, y2, randomInt(0, 2) === 0 ? 'spike' : 'block'));
+          
+          const obstacle2 = ObstacleRegistry.createRandom(
+            spawnDistance2, 
+            { min: y2 - 10, max: y2 + 10 }, 
+            this.difficultyLevel
+          );
+          obstacle2.active = true;
+          this.obstacles.push(obstacle2);
           this.obstacleCooldown = 12;
         }
       }
@@ -391,26 +424,19 @@ export class Game {
 
   private spawnOrbs(): void {
     if (!this.hasStarted) return;
-
     const interval = Math.max(40, 70 - this.difficultyLevel * 2);
     if (this.state.frame % interval === 0 && Math.random() < 0.25) {
-      this.energyOrbs.push(EnergyOrb.createRandom(
-        this.config.width + 20,
-        { min: this.groundY - 70, max: this.groundY - 25 }
-      ));
+      this.energyOrbs.push(EnergyOrb.createRandom(this.config.width + 20, { min: this.groundY - 70, max: this.groundY - 25 }));
     }
   }
 
   private render(): void {
     this.gameRenderer.render(
-      this.state, this.player, this.obstacles, this.energyOrbs,
-      this.platforms,
+      this.state, this.player, this.obstacles, this.energyOrbs, this.platforms,
       this.particles, this.effectsManager.getParticles(),
       this.scrollX, this.hasStarted,
-      this.enigmaOverlayAlpha,
-      this.effectsManager.enigmaMessage,
-      this.effectsManager.enigmaMessageTimer,
-      this.effectsManager.enigmaMessageColor,
+      this.enigmaOverlayAlpha, this.effectsManager.enigmaMessage,
+      this.effectsManager.enigmaMessageTimer, this.effectsManager.enigmaMessageColor,
       this.speedProgress, this.difficultyLevel
     );
     this.modeManager.renderEffects(this.state);
@@ -423,29 +449,29 @@ export class Game {
     this.animationId = requestAnimationFrame((t) => this.gameLoop(t));
   }
 
-  private startLoop(): void {
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.lastTime = performance.now();
-    this.animationId = requestAnimationFrame((t) => this.gameLoop(t));
+  private startLoop(): void { 
+    if (this.isRunning) return; 
+    this.isRunning = true; 
+    this.lastTime = performance.now(); 
+    this.animationId = requestAnimationFrame((t) => this.gameLoop(t)); 
+  }
+  
+  private stopLoop(): void { 
+    if (this.animationId !== null) { 
+      cancelAnimationFrame(this.animationId); 
+      this.animationId = null; 
+    } 
+    this.isRunning = false; 
   }
 
-  private stopLoop(): void {
-    if (this.animationId !== null) {
-      cancelAnimationFrame(this.animationId);
-      this.animationId = null;
-    }
-    this.isRunning = false;
+  public restart(): void { 
+    this.stopLoop(); 
+    this.resetGame(); 
+    this.startLoop(); 
   }
 
-  public restart(): void {
-    this.stopLoop();
-    this.resetGame();
-    this.startLoop();
-  }
-
-  private updateUI(): void {
-    this.uiController.updateStats(this.state.cycle, this.state.energy, this.state.score);
+  private updateUI(): void { 
+    this.uiController.updateStats(this.state.cycle, this.state.energy, this.state.score); 
   }
 
   private updateModeButtons(): void {
@@ -459,8 +485,8 @@ export class Game {
     });
   }
 
-  public destroy(): void {
-    this.stopLoop();
-    this.inputController.destroy();
+  public destroy(): void { 
+    this.stopLoop(); 
+    this.inputController.destroy(); 
   }
 }

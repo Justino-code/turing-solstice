@@ -1,7 +1,8 @@
 // src/systems/RenderSystem.ts - Versão refatorada (coordenador)
 // Coordena todos os renderers especializados
 
-import { Player, Obstacle, Platform, EnergyOrb, Particle, GameState, Challenge } from '../types';
+import { Player, Platform, EnergyOrb, Particle, GameState, Challenge } from '../types';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { BackgroundRenderer } from './BackgroundRenderer';
 import { EntityRenderer } from './EntityRenderer';
 import { EffectRenderer } from './EffectRenderer';
@@ -88,7 +89,8 @@ export class RenderSystem {
     this.entityRenderer.renderPlatform(platform, isNight);
   }
 
-  public renderObstacle(obstacle: Obstacle): void {
+  // Mudança: Obstacle → BaseObstacle
+  public renderObstacle(obstacle: BaseObstacle): void {
     this.entityRenderer.renderObstacle(obstacle);
   }
 

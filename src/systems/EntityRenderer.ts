@@ -2,7 +2,8 @@
 // Responsável por renderizar entidades do jogo: jogador, obstáculos, orbs, plataformas,
 // indicador de pulo e HUD
 
-import { Player, Obstacle, Platform, EnergyOrb, GameState } from '../types';
+import { Player, Platform, EnergyOrb, GameState } from '../types';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { COLORS } from '../constants/game';
 import { t } from '../utils/i18n';
 import { getFontSize } from '../utils/helpers';
@@ -363,54 +364,13 @@ export class EntityRenderer {
     ctx.globalAlpha = 1;
   }
 
-  // ===== OBSTÁCULO =====
+  // ===== OBSTÁCULO - DELEGA A RENDERIZAÇÃO PARA O PRÓPRIO OBSTÁCULO =====
+  // Mudança: Obstacle → BaseObstacle
 
-  public renderObstacle(obstacle: Obstacle): void {
-    const ctx = this.ctx;
-    const vertices = obstacle.getVertices();
-    const color = obstacle.getColor();
-    const glowColor = obstacle.getGlowColor();
-
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 20;
-
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(vertices[0].x, vertices[0].y);
-    for (let i = 1; i < vertices.length; i++) {
-      ctx.lineTo(vertices[i].x, vertices[i].y);
-    }
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-
-    if (obstacle.type === 'crystal') {
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      const cx = obstacle.x + obstacle.w / 2;
-      const cy = obstacle.y + obstacle.h / 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, obstacle.w * 0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.beginPath();
-      ctx.arc(cx - 3, cy - 3, obstacle.w * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (obstacle.type === 'spike') {
-      ctx.strokeStyle = 'rgba(255,0,0,0.2)';
-      ctx.lineWidth = 1;
-      const cx = obstacle.x + obstacle.w / 2;
-      const cy = obstacle.y + obstacle.h / 2;
-      ctx.beginPath();
-      ctx.moveTo(cx - 5, cy - 5);
-      ctx.lineTo(cx + 5, cy + 5);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx + 5, cy - 5);
-      ctx.lineTo(cx - 5, cy + 5);
-      ctx.stroke();
-    }
+  public renderObstacle(obstacle: BaseObstacle): void {
+    // Cada obstáculo é responsável por sua própria renderização
+    // Isso permite que cada tipo de obstáculo tenha sua própria lógica de desenho
+    obstacle.render(this.ctx);
   }
 
   // ===== ORB DE ENERGIA =====
@@ -469,6 +429,7 @@ export class EntityRenderer {
 
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath();
+      // @ts-ignore - roundRect pode não estar disponível em todos os navegadores
       ctx.roundRect(p.x - bx, p.y - by, bw, bh, br);
       ctx.fill();
 
@@ -498,6 +459,7 @@ export class EntityRenderer {
     // Fundo do HUD
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.beginPath();
+    // @ts-ignore - roundRect pode não estar disponível em todos os navegadores
     ctx.roundRect(boxX, boxY, boxW, boxH, boxR);
     ctx.fill();
 
@@ -534,6 +496,7 @@ export class EntityRenderer {
       
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath();
+      // @ts-ignore - roundRect pode não estar disponível em todos os navegadores
       ctx.roundRect(boxX, modeY, boxW, modeH, getFontSize(this.width, 6));
       ctx.fill();
       
