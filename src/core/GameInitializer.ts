@@ -3,7 +3,7 @@
 
 import { GameState } from '../types';
 import { Player } from '../entities/Player';
-import { Obstacle } from '../entities/Obstacle';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { EnergyOrb } from '../entities/EnergyOrb';
 import { EnigmaSystem } from '../systems/EnigmaSystem';
 import { UIController } from '../controllers/UIController';
@@ -65,7 +65,8 @@ export class GameInitializer {
     
     player: Player,
     
-    obstacles: Obstacle[],
+    // Mudança: Obstacle[] → BaseObstacle[]
+    obstacles: BaseObstacle[],
     energyOrbs: EnergyOrb[],
     particles: any[],
     
@@ -112,6 +113,7 @@ export class GameInitializer {
     const playerX = isMobile ? 60 : 120;
     player.reset(playerX, this.groundY - 28);
 
+    // Limpa os arrays (agora com BaseObstacle[])
     obstacles.length = 0;
     energyOrbs.length = 0;
     particles.length = 0;

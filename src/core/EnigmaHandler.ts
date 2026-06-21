@@ -5,7 +5,8 @@ import { InteractionSystem } from '../systems/InteractionSystem';
 import { UIController } from '../controllers/UIController';
 import { GameState } from '../types';
 import { randomInt } from '../utils/helpers';
-import { Obstacle } from '../entities/Obstacle';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
+import { ObstacleRegistry } from '../registries/ObstacleRegistry';
 import { t } from '../utils/i18n';
 
 export class EnigmaHandler {
@@ -18,7 +19,7 @@ export class EnigmaHandler {
   private onStateChange: (state: Partial<GameState>) => void;
   private onShowCenterMessage: (message: string, color: string, duration: number) => void;
   private onCreateEffectExplosion: (x: number, y: number, color: string, count: number) => void;
-  private onAddObstacle: (obstacle: Obstacle) => void;
+  private onAddObstacle: (obstacle: BaseObstacle) => void;
   private onRemoveObstacles: (count: number) => void;
   private onUpdateUI: () => void;
   private onAddPlatform: ((x: number, y: number, w: number, type: string) => void) | null;
@@ -37,7 +38,7 @@ export class EnigmaHandler {
       onStateChange: (state: Partial<GameState>) => void;
       onShowCenterMessage: (message: string, color: string, duration: number) => void;
       onCreateEffectExplosion: (x: number, y: number, color: string, count: number) => void;
-      onAddObstacle: (obstacle: Obstacle) => void;
+      onAddObstacle: (obstacle: BaseObstacle) => void;
       onRemoveObstacles: (count: number) => void;
       onUpdateUI: () => void;
       onAddPlatform?: (x: number, y: number, w: number, type: string) => void;
@@ -71,7 +72,9 @@ export class EnigmaHandler {
         this.onStateChange({ challengeActive: true });
         this.onSetEnigmaState({ overlayAlpha: 0.85, paused: true });
 
-        this.uiController.codeDisplay.innerHTML = `
+        // Usa getter para acessar codeDisplay
+        const codeDisplay = this.uiController.getCodeDisplay();
+        codeDisplay.innerHTML = `
           <div class="enigma-container">
             <div class="enigma-phase">${t('enigma_machine.title')}</div>
             <div class="enigma-subtitle">${t('enigma_machine.subtitle')}</div>
@@ -82,7 +85,9 @@ export class EnigmaHandler {
           </div>
         `;
 
-        this.uiController.optionButtons.forEach((btn, i) => {
+        // Usa getter para acessar optionButtons
+        const optionButtons = this.uiController.getOptionButtons();
+        optionButtons.forEach((btn: HTMLElement, i: number) => {
           if (i < enigma.options.length) {
             btn.textContent = enigma.options[i];
             btn.style.display = 'block';
@@ -110,7 +115,8 @@ export class EnigmaHandler {
           .replace(/Entity A:/g, '<span class="entity-a">Entity A:</span>')
           .replace(/Entity B:/g, '<span class="entity-b">Entity B:</span>');
 
-        this.uiController.codeDisplay.innerHTML = `
+        const codeDisplay = this.uiController.getCodeDisplay();
+        codeDisplay.innerHTML = `
           <div class="enigma-container">
             <div class="enigma-phase">${t('turing_test.title')}</div>
             <div class="enigma-subtitle">${t('turing_test.subtitle')}</div>
@@ -121,7 +127,8 @@ export class EnigmaHandler {
           </div>
         `;
 
-        this.uiController.optionButtons.forEach((btn, i) => {
+        const optionButtons = this.uiController.getOptionButtons();
+        optionButtons.forEach((btn: HTMLElement, i: number) => {
           if (i < enigma.options.length) {
             btn.textContent = enigma.options[i];
             btn.style.display = 'block';
@@ -150,7 +157,13 @@ export class EnigmaHandler {
       this.enigmaSystem.updateCurrentEnigma(updatedEnigma);
 
       const hintEmojis = ['🔮', '🌙', '✨', '🌀', '⚡'];
-      const hintPhrases = ['O padrão revela a verdade', 'A resposta está nos detalhes', 'Confie na lógica', 'Observe com atenção', 'O código fala por si'];
+      const hintPhrases = [
+        t('hint.pattern'),
+        t('hint.details'),
+        t('hint.logic'),
+        t('hint.observe'),
+        t('hint.code')
+      ];
       const randomHint = hintPhrases[Math.floor(Math.random() * hintPhrases.length)];
       const randomEmoji = hintEmojis[Math.floor(Math.random() * hintEmojis.length)];
 
@@ -253,13 +266,21 @@ export class EnigmaHandler {
         this.onCreateEffectExplosion(this.config.width / 2, this.config.height / 2, '#e74c3c', 50);
         this.uiController.setNotification(`🌑 ${msg}`, 'fail');
         state.energy = Math.max(0, state.energy - 10);
+        
+        // Cria obstáculos usando o Registry
         for (let i = 0; i < 2; i++) {
-          const types: ('spike' | 'block' | 'crystal')[] = ['spike', 'block', 'spike', 'crystal'];
+          const types = ['spike', 'block', 'spike', 'crystal'];
           const type = types[randomInt(0, Math.min(2, Math.floor(getDifficultyLevel() / 2)))];
-          const obs = new Obstacle(this.config.width + 20 + i * 50, this.groundY - randomInt(25, 45), type);
+          
+          const obs = ObstacleRegistry.create(
+            type,
+            this.config.width + 20 + i * 50,
+            this.groundY - randomInt(25, 45)
+          );
           this.onAddObstacle(obs);
-          this.onCreateEffectExplosion(obs.x + obs.w/2, obs.y + obs.h/2, '#e74c3c', 15);
+          this.onCreateEffectExplosion(obs.x + obs.w / 2, obs.y + obs.h / 2, '#e74c3c', 15);
         }
+        
         if (state.energy <= 0) {
           this.onStateChange({ gameOver: true });
           const gameover = this.interactionSystem.getGameOver();

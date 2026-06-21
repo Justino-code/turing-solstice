@@ -7,6 +7,7 @@ export const JSONBin = {
 
 export const GEMINI = {
     API_KEY: import.meta.env.VITE_GEMINI_API_KEY,
+    BASE_URL: import.meta.env.VITE_GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta/models',
     MODEL: import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash-lite',
     
 }

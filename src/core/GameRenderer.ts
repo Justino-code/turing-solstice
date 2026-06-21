@@ -4,6 +4,7 @@
 import { GameState } from '../types';
 import { RenderSystem } from '../systems/RenderSystem';
 import { Player } from '../entities/Player';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { Platform } from '../entities/Platform';
 import { SceneManager } from './SceneManager';
 import { t } from '../utils/i18n';
@@ -31,7 +32,7 @@ export class GameRenderer {
   public render(
     state: GameState,
     player: Player,
-    obstacles: any[],
+    obstacles: BaseObstacle[], // Mudança: any[] → BaseObstacle[]
     energyOrbs: any[],
     platforms: Platform[],
     particles: any[],
@@ -78,7 +79,7 @@ export class GameRenderer {
       this.groundY
     );
 
-    // Obstáculos
+    // Obstáculos (agora BaseObstacle[])
     for (const obstacle of obstacles) {
       this.renderSystem.renderObstacle(obstacle);
     }

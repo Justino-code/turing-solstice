@@ -25,8 +25,10 @@ export interface Player extends Vector2D {
   collidesWithCircle(circle: { x: number; y: number; radius: number }): boolean;
 }
 
+export type ObstacleType = 'spike' | 'block' | 'crystal' | 'pillar' | 'watcher' | 'void' | 'storm';
+
 export interface Obstacle extends Vector2D {
-  type: 'spike' | 'block' | 'crystal';
+  type: ObstacleType;
   active: boolean;
   update(speed: number): void;
   getVertices(): { x: number; y: number }[];

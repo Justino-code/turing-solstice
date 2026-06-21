@@ -3,7 +3,7 @@
 
 import { GameState } from '../types';
 import { Player } from '../entities/Player';
-import { Obstacle } from '../entities/Obstacle';
+import { BaseObstacle } from '../entities/obstacles/BaseObstacle';
 import { EnergyOrb } from '../entities/EnergyOrb';
 import { EnigmaSystem } from '../systems/EnigmaSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
@@ -49,7 +49,7 @@ export class GameUpdater {
   public update(
     state: GameState,
     player: Player,
-    obstacles: Obstacle[],
+    obstacles: BaseObstacle[], // Mudança: Obstacle[] → BaseObstacle[]
     energyOrbs: EnergyOrb[],
     particles: any[],
     sceneManager: SceneManager,
@@ -116,6 +116,7 @@ export class GameUpdater {
       player.grounded = true;
     }
 
+    // Atualiza obstáculos (agora BaseObstacle[])
     for (const obstacle of obstacles) {
       obstacle.update(state.speed);
     }
