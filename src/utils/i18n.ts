@@ -33,6 +33,22 @@ const translations: Record<string, Record<Language, string>> = {
   },
 
   // ===== PAUSA =====
+  'pause.title': {
+    pt: '⏸️ JOGO PAUSADO',
+    en: '⏸️ GAME PAUSED'
+  },
+  'pause.subtitle': {
+    pt: 'Descanse um pouco, o jogo espera por você',
+    en: 'Take a break, the game will wait for you'
+  },
+  'pause.resume': {
+    pt: '▶ RETOMAR',
+    en: '▶ RESUME'
+  },
+  'pause.hint': {
+    pt: 'Pressione ESC ou clique no botão para retomar',
+    en: 'Press ESC or click the button to resume'
+  },
   'pause.paused': {
     pt: '⏸️ Pausado',
     en: '⏸️ Paused'
@@ -86,6 +102,50 @@ const translations: Record<string, Record<Language, string>> = {
   'enigma.code_incorrect': {
     pt: '❌ CÓDIGO INCORRETO',
     en: '❌ INCORRECT CODE'
+  },
+
+  // ===== ENIGMA MACHINE (FASE 1) =====
+  'enigma_machine.title': {
+    pt: '🔐 FASE 1: A MÁQUINA ENIGMA',
+    en: '🔐 PHASE 1: THE ENIGMA MACHINE'
+  },
+  'enigma_machine.subtitle': {
+    pt: 'Decifre a mensagem secreta • Sem tempo limite',
+    en: 'Decrypt the secret message • No time limit'
+  },
+  'enigma_machine.hint': {
+    pt: '🔐 Decifre a mensagem secreta. Sem pressa.',
+    en: '🔐 Decrypt the secret message. Take your time.'
+  },
+  'enigma_machine.decrypted': {
+    pt: '✅ ENIGMA DECIFRADA!',
+    en: '✅ ENIGMA DECRYPTED!'
+  },
+  'enigma_machine.success': {
+    pt: '✅ Máquina Enigma decifrada! Preparando Teste de Turing...',
+    en: '✅ Enigma Machine decrypted! Preparing Turing Test...'
+  },
+  'enigma_machine.wrong': {
+    pt: '❌ Código errado! Tente novamente...',
+    en: '❌ Wrong code! Try again...'
+  },
+  'enigma_machine.center': {
+    pt: '🔐 A MÁQUINA ENIGMA',
+    en: '🔐 THE ENIGMA MACHINE'
+  },
+
+  // ===== TURING TEST (FASE 2) =====
+  'turing_test.title': {
+    pt: '🧠 FASE 2: O TESTE DE TURING',
+    en: '🧠 PHASE 2: THE TURING TEST'
+  },
+  'turing_test.subtitle': {
+    pt: 'Identifique a Inteligência Artificial • Sem tempo limite',
+    en: 'Identify the Artificial Intelligence • No time limit'
+  },
+  'turing_test.center': {
+    pt: '🧠 O TESTE DE TURING',
+    en: '🧠 THE TURING TEST'
   },
 
   // ===== GAME OVER =====
@@ -188,7 +248,7 @@ const translations: Record<string, Record<Language, string>> = {
     en: '🎨 Spectrum Mode: OFF'
   },
 
-  // ===== TURING TEST =====
+  // ===== TURING =====
   'turing.title': {
     pt: '🔐 O ÚLTIMO CÓDIGO',
     en: '🔐 THE LAST CODE'
@@ -197,14 +257,38 @@ const translations: Record<string, Record<Language, string>> = {
     pt: '🌈 TURING VISION DESBLOQUEADO!',
     en: '🌈 TURING VISION UNLOCKED!'
   },
+  'turing.no_time_limit': {
+    pt: '🔐 Não há tempo limite. Reflita com calma.',
+    en: '🔐 No time limit. Take your time.'
+  },
+
+  // ===== HINTS =====
+  'hint.pattern': {
+    pt: 'O padrão revela a verdade',
+    en: 'The pattern reveals the truth'
+  },
+  'hint.details': {
+    pt: 'A resposta está nos detalhes',
+    en: 'The answer is in the details'
+  },
+  'hint.logic': {
+    pt: 'Confie na lógica',
+    en: 'Trust the logic'
+  },
+  'hint.observe': {
+    pt: 'Observe com atenção',
+    en: 'Observe carefully'
+  },
+  'hint.code': {
+    pt: 'O código fala por si',
+    en: 'The code speaks for itself'
+  },
 
   // ===== HUD =====
   'hud.level': {
     pt: '⚡ Nível',
     en: '⚡ Level'
   },
-
-  // Adicionar no objeto translations:
 
   // ===== RANKING =====
   'ranking.title': {
@@ -228,70 +312,18 @@ const translations: Record<string, Record<Language, string>> = {
     en: '🌍 Loading...'
   },
   'ranking.unavailable': {
-    pt: 'Ranking global indisponível',
-    en: 'Global ranking unavailable'
+    pt: '🌍 Ranking global indisponível',
+    en: '🌍 Global ranking unavailable'
   },
   'ranking.empty': {
     pt: '📭 Nenhum score ainda',
     en: '📭 No scores yet'
   },
-
-  'turing.no_time_limit': {
-    pt: '🔐 Não há tempo limite. Reflita com calma.',
-    en: '🔐 No time limit. Take your time.'
-  },
-
-  'enigma_machine.subtitle': {
-    pt: 'Decifre a mensagem secreta • Sem tempo limite',
-    en: 'Decrypt the secret message • No time limit'
-  },
-  'enigma_machine.hint': {
-    pt: '🔐 Decifre a mensagem secreta. Sem pressa.',
-    en: '🔐 Decrypt the secret message. Take your time.'
-  },
-
-  // Adicionar ao objeto translations:
-
-  // ===== ENIGMA MACHINE (FASE 1) =====
-  'enigma_machine.title': {
-    pt: '🔐 FASE 1: A MÁQUINA ENIGMA',
-    en: '🔐 PHASE 1: THE ENIGMA MACHINE'
-  },
-
-  'enigma_machine.decrypted': {
-    pt: '✅ ENIGMA DECIFRADA!',
-    en: '✅ ENIGMA DECRYPTED!'
-  },
-  'enigma_machine.success': {
-    pt: '✅ Máquina Enigma decifrada! Preparando Teste de Turing...',
-    en: '✅ Enigma Machine decrypted! Preparing Turing Test...'
-  },
-  'enigma_machine.wrong': {
-    pt: '❌ Código errado! Tente novamente...',
-    en: '❌ Wrong code! Try again...'
-  },
-
-  // ===== TURING TEST (FASE 2) =====
-  'turing_test.title': {
-    pt: '🧠 FASE 2: O TESTE DE TURING',
-    en: '🧠 PHASE 2: THE TURING TEST'
-  },
-  'turing_test.subtitle': {
-    pt: 'Identifique a Inteligência Artificial • Sem tempo limite',
-    en: 'Identify the Artificial Intelligence • No time limit'
-  },
-  'turing_test.center': {
-    pt: '🧠 O TESTE DE TURING',
-    en: '🧠 THE TURING TEST'
-  },
-
-  // ===== ENIGMA MACHINE (FASE 1 CENTER) =====
-  'enigma_machine.center': {
-    pt: '🔐 A MÁQUINA ENIGMA',
-    en: '🔐 THE ENIGMA MACHINE'
+  'ranking.not_configured': {
+    pt: '⚠️ Ranking global não configurado',
+    en: '⚠️ Global ranking not configured'
   },
 };
-
 
 let currentLanguage: Language = 'pt';
 
@@ -300,7 +332,6 @@ const STORAGE_KEY = 'turing-solstice-language';
 // Detecta idioma do navegador
 function detectBrowserLanguage(): Language {
   const lang = navigator.language || (navigator as any).userLanguage || 'pt';
-  // Se começar com 'pt', usa português, senão inglês
   return lang.toLowerCase().startsWith('pt') ? 'pt' : 'en';
 }
 
@@ -309,7 +340,6 @@ const savedLanguage = localStorage.getItem(STORAGE_KEY) as Language | null;
 if (savedLanguage === 'pt' || savedLanguage === 'en') {
   currentLanguage = savedLanguage;
 } else {
-  // Primeira visita: detecta do navegador
   currentLanguage = detectBrowserLanguage();
   localStorage.setItem(STORAGE_KEY, currentLanguage);
 }

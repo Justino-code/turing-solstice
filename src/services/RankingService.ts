@@ -1,13 +1,11 @@
 // src/services/RankingService.ts
-// Serviço de ranking pessoal (localStorage)
+// Serviço de ranking pessoal (localStorage) - SIMPLES
 
 export interface ScoreEntry {
   score: number;
   cycle: number;
   date: string;
   mode: string;
-  player: string;
-  fingerprint: string;
 }
 
 export class RankingService {
@@ -24,9 +22,7 @@ export class RankingService {
       score: Math.floor(score),
       cycle,
       date: new Date().toLocaleDateString(),
-      mode,
-      player: this.getPlayerName(),
-      fingerprint: this.getFingerprint()
+      mode
     });
     
     scores.sort((a, b) => b.score - a.score);
@@ -73,21 +69,13 @@ export class RankingService {
   }
 
   /**
-   * Obtém a posição no ranking pessoal
-   */
-  public static getRank(score: number): number {
-    const scores = this.getScores();
-    return scores.filter(s => s.score > score).length + 1;
-  }
-
-  /**
    * Limpa o ranking pessoal
    */
   public static clear(): void {
     localStorage.removeItem(this.STORAGE_KEY);
   }
 
-  // ===== IDENTIFICAÇÃO DO JOGADOR =====
+  // ===== DADOS DO JOGADOR (usado pelo ranking global) =====
 
   /**
    * Gera um fingerprint único baseado no dispositivo
@@ -111,18 +99,26 @@ export class RankingService {
   }
 
   /**
-   * Obtém o nome do jogador
+   * Obtém o nome do jogador (para o ranking global)
    */
   public static getPlayerName(): string {
     return localStorage.getItem('turing-player-name') || 'Anônimo';
   }
 
   /**
-   * Define o nome do jogador
+   * Define o nome do jogador (para o ranking global)
    */
   public static setPlayerName(name: string): void {
     if (name && name.trim()) {
       localStorage.setItem('turing-player-name', name.trim());
     }
+  }
+
+  /**
+   * Verifica se o jogador já definiu um nome
+   */
+  public static hasCustomName(): boolean {
+    const name = this.getPlayerName();
+    return name !== 'Anônimo' && name.length > 0;
   }
 }

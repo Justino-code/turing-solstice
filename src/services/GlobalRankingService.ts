@@ -24,9 +24,8 @@ export class GlobalRankingService {
   private static BASE_URL = JSONBin.BASE_URL;
   private static MAX_ENTRIES = JSONBin.MAX_ENTRIES;
   
-  // Cache local para evitar muitas chamadas à API
   private static CACHE_KEY = 'turing-global-scores-cache';
-  private static CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+  private static CACHE_DURATION = 5 * 60 * 1000;
 
   /**
    * Obtém os scores globais (com cache)
@@ -37,14 +36,12 @@ export class GlobalRankingService {
       return [];
     }
 
-    // Verifica cache primeiro
     const cached = this.getCache();
     if (cached) {
       console.log('📦 Ranking global carregado do cache');
       return cached;
     }
 
-    // Cache expirado ou não existe, busca da API
     try {
       console.log('🌍 Buscando ranking global da API...');
       const response = await fetch(`${this.BASE_URL}/${this.BIN_ID}/latest`, {
@@ -53,24 +50,23 @@ export class GlobalRankingService {
       
       if (!response.ok) {
         console.warn('🌍 Ranking global indisponível');
-        return this.getCache() || []; // Retorna cache expirado se existir
+        return this.getCache() || [];
       }
       
       const data = await response.json();
-      const scores = data.record || [];
-      
-      // Salva no cache
+      const scores = Array.isArray(data.record) ? data.record : [];
       this.setCache(scores);
-      
       return scores;
     } catch (error) {
       console.warn('🌍 Erro ao carregar ranking global:', error);
-      return this.getCache() || []; // Retorna cache expirado se existir
+      return this.getCache() || [];
     }
   }
 
   /**
    * Envia um score para o ranking global
+   * - Mesmo fingerprint: atualiza apenas se score for maior
+   * - Fingerprint novo: adiciona
    */
   public static async submitScore(score: number, cycle: number, mode: string): Promise<boolean> {
     if (!this.isConfigured()) {
@@ -80,15 +76,40 @@ export class GlobalRankingService {
 
     try {
       const currentScores = await this.getGlobalScores();
+      const fingerprint = RankingService.getFingerprint();
+      const playerName = RankingService.getPlayerName();
       
-      currentScores.push({
-        score: Math.floor(score),
-        cycle,
-        date: new Date().toLocaleDateString(),
-        mode,
-        player: RankingService.getPlayerName(),
-        fingerprint: RankingService.getFingerprint()
-      });
+      // Verifica se o jogador já existe pelo fingerprint
+      const existingIndex = currentScores.findIndex(s => s.fingerprint === fingerprint);
+      
+      if (existingIndex >= 0) {
+        // Já existe: só atualiza se o novo score for maior
+        if (score > currentScores[existingIndex].score) {
+          currentScores[existingIndex] = {
+            score: Math.floor(score),
+            cycle,
+            date: new Date().toLocaleDateString(),
+            mode,
+            player: playerName,
+            fingerprint
+          };
+          console.log('🌍 Score atualizado no ranking global!');
+        } else {
+          console.log('🌍 Score não é maior que o recorde atual');
+          return false;
+        }
+      } else {
+        // Novo jogador
+        currentScores.push({
+          score: Math.floor(score),
+          cycle,
+          date: new Date().toLocaleDateString(),
+          mode,
+          player: playerName,
+          fingerprint
+        });
+        console.log('🌍 Novo jogador adicionado ao ranking global!');
+      }
       
       currentScores.sort((a, b) => b.score - a.score);
       const topScores = currentScores.slice(0, this.MAX_ENTRIES);
@@ -107,10 +128,8 @@ export class GlobalRankingService {
         return false;
       }
       
-      // Atualiza cache local com os novos dados
       this.setCache(topScores);
-      
-      console.log('🌍 Score enviado para ranking global!');
+      console.log('🌍 Ranking global sincronizado!');
       return true;
     } catch (error) {
       console.warn('🌍 Erro ao enviar score global:', error);
@@ -137,37 +156,24 @@ export class GlobalRankingService {
 
   // ===== CACHE LOCAL =====
 
-  /**
-   * Obtém dados do cache
-   */
   private static getCache(): GlobalScoreEntry[] | null {
     try {
       const raw = localStorage.getItem(this.CACHE_KEY);
       if (!raw) return null;
-      
       const cache: CacheEntry = JSON.parse(raw);
-      
-      // Verifica se o cache ainda é válido
       if (Date.now() - cache.timestamp > this.CACHE_DURATION) {
         console.log('⏰ Cache do ranking global expirado');
         return null;
       }
-      
       return cache.data;
     } catch {
       return null;
     }
   }
 
-  /**
-   * Salva dados no cache
-   */
   private static setCache(data: GlobalScoreEntry[]): void {
     try {
-      const cache: CacheEntry = {
-        data,
-        timestamp: Date.now()
-      };
+      const cache: CacheEntry = { data, timestamp: Date.now() };
       localStorage.setItem(this.CACHE_KEY, JSON.stringify(cache));
       console.log('💾 Cache do ranking global atualizado');
     } catch (error) {
@@ -175,17 +181,11 @@ export class GlobalRankingService {
     }
   }
 
-  /**
-   * Limpa o cache
-   */
   public static clearCache(): void {
     localStorage.removeItem(this.CACHE_KEY);
     console.log('🧹 Cache do ranking global removido');
   }
 
-  /**
-   * Força atualização do cache
-   */
   public static async refreshCache(): Promise<GlobalScoreEntry[]> {
     this.clearCache();
     return this.getGlobalScores();
