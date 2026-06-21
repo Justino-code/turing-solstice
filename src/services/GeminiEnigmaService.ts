@@ -27,17 +27,11 @@ export class GeminiEnigmaService {
     return this.adapter.isServiceAvailable();
   }
 
-  /**
-   * Chave de storage por idioma
-   */
   private get storageKey(): string {
     const lang = getLanguage();
     return `turing_enigmas_batch_${lang}`;
   }
 
-  /**
-   * Gera um lote de enigmas em uma única chamada
-   */
   public async generateEnigmaBatch(difficulty: number): Promise<Enigma[]> {
     if (!this.adapter.isServiceAvailable()) {
       throw new Error('Gemini API não disponível');
@@ -86,9 +80,9 @@ export class GeminiEnigmaService {
       // ... mais ${count - 1} enigmas
     ]
     
-    Regras para CADA enigma:
+    Regras IMPORTANTES para CADA enigma:
     1. 4 opções de resposta (ou 2 se for binário)
-    2. Resposta correta única e clara
+    2. A resposta correta deve ser RANDÔMICA, não sempre a primeira opção
     3. Dica deve ajudar sem revelar a resposta
     4. Regra deve explicar a lógica de forma simples
     5. Seja criativo, não se limite a tipos comuns
@@ -97,7 +91,11 @@ export class GeminiEnigmaService {
     8. A dificuldade deve ser compatível com o nível solicitado
     9. TODOS os enigmas devem ser DIFERENTES entre si
     10. Varie os tipos de enigma (binário, sequência, lógica, criptografia, padrões, etc.)
-    ${lang === 'pt' ? '11. TODOS os textos (pergunta, opções, dica, regra) devem estar em PORTUGUÊS' : '11. ALL texts (question, options, hint, rule) must be in ENGLISH'}
+    11. IMPORTANTE: o correctIndex deve ser RANDÔMICO entre 0 e 3 (ou 0 e 1 para 2 opções)
+    12. NÃO coloque a resposta correta sempre na mesma posição
+    13. Varie a posição da resposta correta ao longo dos enigmas
+    
+    ${lang === 'pt' ? '14. TODOS os textos (pergunta, opções, dica, regra) devem estar em PORTUGUÊS' : '14. ALL texts (question, options, hint, rule) must be in ENGLISH'}
     
     Responda APENAS o JSON, sem texto adicional.`;
   }
@@ -105,13 +103,26 @@ export class GeminiEnigmaService {
   private parseBatchResponse(parsed: any[], difficulty: number): Enigma[] {
     return parsed.map((item: any, index: number) => {
       const options = item.options || ['A', 'B', 'C', 'D'];
-      const correctIndex = item.correctIndex !== undefined ? item.correctIndex : 0;
+      let correctIndex = item.correctIndex !== undefined ? item.correctIndex : 0;
+      
+      // Garante que o correctIndex esteja dentro dos limites
+      if (correctIndex >= options.length) {
+        correctIndex = options.length - 1;
+      }
+      if (correctIndex < 0) {
+        correctIndex = 0;
+      }
+      
+      // Se o enigma veio sem correctIndex ou com valor inválido, gera aleatório
+      if (item.correctIndex === undefined || item.correctIndex === null) {
+        correctIndex = Math.floor(Math.random() * options.length);
+      }
       
       return {
         id: `gemini_${Date.now()}_${Math.random().toString(36).substr(2, 5)}_${index}`,
         question: item.question || 'Qual é a resposta correta?',
         options: options.slice(0, 4),
-        correctIndex: Math.min(correctIndex, options.length - 1),
+        correctIndex: correctIndex,
         pattern: item.pattern || '◆ ◇ ◆ ◇',
         type: item.type || 'enigma',
         difficulty: difficulty,
@@ -122,9 +133,6 @@ export class GeminiEnigmaService {
     });
   }
 
-  /**
-   * Salva o lote no localStorage
-   */
   private saveBatch(enigmas: Enigma[]): void {
     const batch: EnigmaBatch = {
       id: `batch_${Date.now()}`,
@@ -149,9 +157,6 @@ export class GeminiEnigmaService {
     }
   }
 
-  /**
-   * Obtém o próximo enigma do lote armazenado
-   */
   public getNextEnigmaFromBatch(): Enigma | null {
     try {
       const data = localStorage.getItem(this.storageKey);
@@ -159,30 +164,36 @@ export class GeminiEnigmaService {
       
       const batch: EnigmaBatch = JSON.parse(data);
       
-      // Verifica se o idioma do lote coincide com o atual
       if (batch.language !== getLanguage()) {
         console.log('🔄 Idioma diferente, ignorando lote antigo');
         return null;
       }
       
-      for (let i = 0; i < batch.enigmas.length; i++) {
-        if (!batch.usedIndexes.includes(i)) {
-          batch.usedIndexes.push(i);
-          localStorage.setItem(this.storageKey, JSON.stringify(batch));
-          return batch.enigmas[i];
-        }
+      // Embaralha os índices não usados para maior variedade
+      const availableIndexes = batch.enigmas
+        .map((_, i) => i)
+        .filter(i => !batch.usedIndexes.includes(i));
+      
+      if (availableIndexes.length === 0) {
+        // Reinicia se todos foram usados
+        console.log('🔄 Todos os enigmas usados, reiniciando lote');
+        batch.usedIndexes = [];
+        localStorage.setItem(this.storageKey, JSON.stringify(batch));
+        return batch.enigmas[0];
       }
       
-      return null;
+      // Pega um índice aleatório dos disponíveis
+      const randomIndex = availableIndexes[Math.floor(Math.random() * availableIndexes.length)];
+      batch.usedIndexes.push(randomIndex);
+      localStorage.setItem(this.storageKey, JSON.stringify(batch));
+      
+      return batch.enigmas[randomIndex];
     } catch (error) {
       console.error('Erro ao obter enigma do lote:', error);
       return null;
     }
   }
 
-  /**
-   * Verifica se há enigmas disponíveis no lote
-   */
   public hasEnigmasAvailable(): boolean {
     try {
       const data = localStorage.getItem(this.storageKey);
@@ -190,7 +201,6 @@ export class GeminiEnigmaService {
       
       const batch: EnigmaBatch = JSON.parse(data);
       
-      // Verifica idioma
       if (batch.language !== getLanguage()) return false;
       
       return batch.usedIndexes.length < batch.enigmas.length;
@@ -199,9 +209,6 @@ export class GeminiEnigmaService {
     }
   }
 
-  /**
-   * Obtém o número de enigmas restantes
-   */
   public getRemainingCount(): number {
     try {
       const data = localStorage.getItem(this.storageKey);
@@ -217,9 +224,6 @@ export class GeminiEnigmaService {
     }
   }
 
-  /**
-   * Limpa o lote do idioma atual
-   */
   public clearBatch(): void {
     try {
       localStorage.removeItem(this.storageKey);
@@ -229,9 +233,6 @@ export class GeminiEnigmaService {
     }
   }
 
-  /**
-   * Limpa todos os lotes de todos os idiomas
-   */
   private clearAllBatches(): void {
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
@@ -240,5 +241,19 @@ export class GeminiEnigmaService {
       }
     });
     console.log('🧹 Todos os lotes de enigmas removidos');
+  }
+
+  // ===== MÉTODO DE TESTE =====
+  public async testEnigmaGeneration(difficulty: number = 0): Promise<void> {
+    console.log('🧪 Testando geração de enigmas...');
+    try {
+      const enigmas = await this.generateEnigmaBatch(difficulty);
+      console.log(`✅ ${enigmas.length} enigmas gerados:`);
+      enigmas.forEach((e, i) => {
+        console.log(`  ${i + 1}. "${e.question}" → Resposta correta: ${e.options[e.correctIndex]} (${e.correctIndex})`);
+      });
+    } catch (error) {
+      console.error('❌ Erro no teste:', error);
+    }
   }
 }
