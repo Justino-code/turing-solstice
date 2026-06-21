@@ -68,7 +68,7 @@ yarn dev
 ```env
 # Gemini API
 VITE_GEMINI_API_KEY=your_api_key
-VITE_GEMINI_MODEL=gemini-2.0-flash-exp
+VITE_GEMINI_MODEL=gemini-2.5-flash-lite
 VITE_GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models
 
 # JSONBin.io (Global Ranking)
@@ -149,6 +149,15 @@ MIT
 
 ---
 
+## 👤 Author
+
+**Justino Code**
+
+- GitHub: [@justino-code](https://github.com/justino-code)
+- Project Link: [https://github.com/justino-code/turing-solstice](https://github.com/justino-code/turing-solstice)
+
+---
+
 ## 🙏 Credits
 
 - **Alan Turing** - Inspiration for puzzles and the Turing Test
@@ -160,7 +169,7 @@ MIT
 
 ## 📸 Screenshots
 
-> *(Add your screenshots here)*
+> [View all screenshots](docs/SCREENSHOTS.md)
 
 ---
 
